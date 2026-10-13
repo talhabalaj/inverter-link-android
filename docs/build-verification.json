@@ -11,5 +11,14 @@
   "apk_sha256": "d80ef2be9389a9b41c691fc8b5d99d54f07702baf3132fb781e1dda3a9cd9934",
   "physical_android_verified": false,
   "emulator_api": 36,
-  "material3": "1.5.0-beta01"
+  "material3": "1.5.0-beta01",
+  "signed_release_installed_on_emulator": true,
+  "release_ignores_preview": true,
+  "github_release_digest_verified": true,
+  "github_actions": {
+    "run_id": 38457829641,
+    "conclusion": "success",
+    "source_commit": "pre-publication-verification",
+    "url": "https://github.com/talhabalaj/inverter-link-android/actions"
+  }
 }
