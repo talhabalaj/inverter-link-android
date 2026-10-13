@@ -15,13 +15,17 @@ Both apps implement the same local PI30 functionality and 37-setting map, with p
 
 ## Before using it
 
+> [!WARNING]
 > **This app can change real inverter settings.** Charging, battery voltage limits, AC output, alarms and recovery behavior can take effect immediately. Start with monitoring. Use the inverter and battery manufacturers’ specifications.
->
+
+> [!WARNING]
 > **Wrong battery values can interrupt power or damage the battery.** Command validation checks documented formats and limits; it cannot decide what is appropriate for your battery or wiring.
->
+
+> [!WARNING]
 > **Local mode may pause Energy Mate cloud reporting.** Discovery and connection request callbacks to this phone on TCP 8899. Restoring the previous cloud destination automatically has not been verified.
->
-> **The logger’s local protocol has no authentication or encryption.** Use a trusted LAN. Do not expose the logger or TCP 8899 to the internet.
+
+> [!WARNING]
+> **The logger’s local protocol has no authentication or encryption.** Use a trusted LAN. Do not expose the logger or TCP 8899 to the internet. Treat devices that can reach the logger as able to control the inverter. **[Read the security setup guide](SECURITY.md) before connecting.**
 
 Compatibility is based on a SolarMax-branded 4 kW / 24 V inverter using an Eybond / Energy Mate logger and the verified PI30 layout. White-label branding alone does not establish compatibility. The app rejects other protocol IDs and unsupported status layouts. The settings map and battery limits are specific to the verified 24 V layout.
 

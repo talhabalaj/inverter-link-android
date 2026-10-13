@@ -21,6 +21,8 @@ The user-facing Release APK is separately signed with a local RSA key and checke
 The signed Release APK installs and launches on the API 36 emulator. A `preview=true` intent is ignored by Release, which opens the normal empty Devices screen. The private GitHub prerelease asset's SHA-256 matches the local signed APK recorded in `docs/build-verification.json`.
 
 
+[GitHub Actions run 38460212212](https://github.com/talhabalaj/inverter-link-android/actions/runs/38460212212) passed tests, lint, Debug and Release APK builds on commit `d6c93b7`, after public-history sanitization. Subsequent documentation updates do not alter application code.
+
 ## Emulator walkthrough
 
 Pixel 9 Pro, Android 16 / API 36, labeled sample data:
