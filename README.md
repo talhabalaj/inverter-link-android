@@ -11,7 +11,15 @@ Functionality is ported from [Inverter Link for iOS](https://github.com/talhabal
 | Android | [Inverter Link for Android](https://github.com/talhabalaj/inverter-link-android) | Jetpack Compose / Material 3 Expressive |
 | iOS | [Inverter Link](https://github.com/talhabalaj/inverter-link) | SwiftUI / RealityKit |
 
-Both apps implement the same local PI30 functionality and 37-setting map, with platform-specific controls and background behavior. [Download the signed Android APK](https://github.com/talhabalaj/inverter-link-android/releases/tag/v0.1.0).
+Both apps implement the same local PI30 functionality and 37-setting map, with platform-specific controls and background behavior. [Download the signed Android APK](https://github.com/talhabalaj/inverter-link-android/releases/tag/v0.1.1).
+
+## Tested inverter
+
+| Inverter | Logger / protocol | Verification |
+| --- | --- | --- |
+| **SolarMax Orion 4 kW (24 V)** | Energy Mate / Eybond · PI30 | Monitoring, settings reads and LED color 1 verified using the original iOS/local implementation; Android physical verification is pending |
+
+Android is verified with emulator UI and mock/loopback protocol tests. Using Energy Mate alone does not establish compatibility with another inverter model.
 
 ## Before using it
 
@@ -27,7 +35,7 @@ Both apps implement the same local PI30 functionality and 37-setting map, with p
 > [!WARNING]
 > **The logger’s local protocol has no authentication or encryption.** Use a trusted LAN. Do not expose the logger or TCP 8899 to the internet. Treat devices that can reach the logger as able to control the inverter. **[Read the security setup guide](SECURITY.md) before connecting.**
 
-Compatibility is based on a SolarMax-branded 4 kW / 24 V inverter using an Eybond / Energy Mate logger and the verified PI30 layout. White-label branding alone does not establish compatibility. The app rejects other protocol IDs and unsupported status layouts. The settings map and battery limits are specific to the verified 24 V layout.
+Compatibility is based on the **SolarMax Orion 4 kW / 24 V** inverter using an Eybond / Energy Mate logger and the verified PI30 layout. White-label branding alone does not establish compatibility. The app rejects other protocol IDs and unsupported status layouts. The settings map and battery limits are specific to the verified 24 V layout.
 
 Only LED color 1 has been physically changed and checked using the original iOS/local implementation. Android setting writes and the other setting commands still require physical validation. ACK without matching readback is an error; writes are never retried automatically. If verification is interrupted, check the inverter display before retrying. Factory reset, data erasure, AC2 schedules and maximum discharge-current settings are not exposed because they are outside the verified implementation.
 

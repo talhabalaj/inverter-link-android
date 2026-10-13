@@ -214,7 +214,10 @@ class ProtocolTest {
         fails { LEDSettings.parse("1 0 3 0 2 000000999 000000255") }
     }
 
-    private suspend fun withMock(block: suspend (InverterSession, AtomicInteger) -> Unit) =
+    private suspend fun withMock(
+        replies: Map<String, String> = Sample.replies,
+        block: suspend (InverterSession, AtomicInteger) -> Unit,
+    ) =
         coroutineScope {
             val server = ServerSocket(0)
             val writes = AtomicInteger()
@@ -243,7 +246,7 @@ class ProtocolTest {
                                                     .copyOfRange(0, frame.payload.size - 3)
                                                     .toString(Charsets.US_ASCII)
                                             val text =
-                                                Sample.replies[command]
+                                                replies[command]
                                                     ?: "ACK".also { writes.incrementAndGet() }
                                             val body = "($text".toByteArray()
                                             TunnelFrame(
@@ -274,6 +277,39 @@ class ProtocolTest {
                 server.close()
             }
         }
+
+    @Test
+    fun startupRejectionNamesTheCommand() = runBlocking {
+        withTimeout(10000) {
+            for (command in listOf("QPI", "QVFW", "QPIRI")) {
+                try {
+                    withMock(replies = Sample.replies + (command to "NAK")) { _, _ ->
+                        fail("Rejected startup query should fail")
+                    }
+                } catch (e: IllegalArgumentException) {
+                    assertTrue("Missing command in: ${e.message}", e.message!!.contains(command))
+                    assertTrue(e.message!!.contains("NAK"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun readingRejectionNamesTheCommand() = runBlocking {
+        withTimeout(10000) {
+            for (command in listOf("QPIGS", "QMOD", "QPIWS")) {
+                withMock(replies = Sample.replies + (command to "NAK")) { session, _ ->
+                    try {
+                        session.read()
+                        fail("Rejected reading query should fail")
+                    } catch (e: IllegalArgumentException) {
+                        assertTrue("Missing command in: ${e.message}", e.message!!.contains(command))
+                        assertTrue(e.message!!.contains("NAK"))
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun realSocketHandshakeAndReads() = runBlocking {

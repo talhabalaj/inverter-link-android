@@ -1,24 +1,19 @@
 {
-  "version": "0.1.0",
-  "version_code": 1,
+  "version": "0.1.1",
+  "version_code": 2,
   "tests": {
-    "tests": "17",
+    "tests": "19",
     "failures": "0",
     "errors": "0",
     "skipped": "0"
   },
   "release_archive": "built",
-  "apk_sha256": "d80ef2be9389a9b41c691fc8b5d99d54f07702baf3132fb781e1dda3a9cd9934",
+  "apk_sha256": "0df8fbc200497729b512f22bc851f4df615b4044a3d998cb01a6b7822a132452",
   "physical_android_verified": false,
   "emulator_api": 36,
   "material3": "1.5.0-beta01",
   "signed_release_installed_on_emulator": true,
   "release_ignores_preview": true,
-  "github_release_digest_verified": true,
-  "github_actions": {
-    "run_id": 38460212212,
-    "conclusion": "success",
-    "source_commit": "d6c93b7b8fc5615f5e9bad3bbb5a61c4cdf78dd2",
-    "url": "https://github.com/talhabalaj/inverter-link-android/actions/runs/38460212212"
-  }
+  "github_release_digest_verified": false,
+  "emulator_ui_verified_version": "0.1.0"
 }

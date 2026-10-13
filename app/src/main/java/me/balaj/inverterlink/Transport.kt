@@ -239,7 +239,13 @@ class InverterSession(private val socket: Socket) : Closeable {
         }
     }
 
-    suspend fun query(command: ReadCommand) = exchange(PI30.request(command.wire))
+    suspend fun query(command: ReadCommand): String =
+        try {
+            exchange(PI30.request(command.wire))
+        } catch (e: IllegalArgumentException) {
+            // Preserve the failing query when startup closes the connection before diagnostics open.
+            throw IllegalArgumentException("${command.label} (${command.wire}): ${e.message}", e)
+        }
 
     suspend fun read(): Reading {
         val status = query(ReadCommand.STATUS)
