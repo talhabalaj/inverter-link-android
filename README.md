@@ -4,6 +4,15 @@ Native Kotlin / Jetpack Compose inverter monitoring and control over local Wi-Fi
 
 Functionality is ported from [Inverter Link for iOS](https://github.com/talhabalaj/inverter-link), baseline `6458b22` / build `20261013.9`. The Android app uses Android navigation, controls and notifications.
 
+## Companion apps
+
+| Platform | Repository | Native UI |
+| --- | --- | --- |
+| Android | [Inverter Link for Android](https://github.com/talhabalaj/inverter-link-android) | Jetpack Compose / Material 3 Expressive |
+| iOS | [Inverter Link](https://github.com/talhabalaj/inverter-link) | SwiftUI / RealityKit |
+
+Both apps implement the same local PI30 functionality and 37-setting map, with platform-specific controls and background behavior. [Download the signed Android APK](https://github.com/talhabalaj/inverter-link-android/releases/tag/v0.1.0).
+
 ## Before using it
 
 > **This app can change real inverter settings.** Charging, battery voltage limits, AC output, alarms and recovery behavior can take effect immediately. Start with monitoring. Use the inverter and battery manufacturers’ specifications.
