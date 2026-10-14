@@ -1,10 +1,10 @@
 # Verification and parity
 
-Android 0.1.1, version code 2. Source baseline: iOS build 20261013.9 (`6458b22`). Tested source hardware: SolarMax Orion 4 kW / 24 V with an Energy Mate / Eybond logger.
+Android 0.1.2, version code 3. Source baseline: iOS build 20261013.9 (`6458b22`). Tested source hardware: SolarMax Orion 4 kW / 24 V with an Energy Mate / Eybond logger.
 
 ## Automated evidence
 
-19 JVM tests pass. Coverage includes:
+27 JVM tests pass. Coverage includes:
 
 - Recorded PI30 CRC bytes, rejected checksums / NAK / non-ASCII replies.
 - Fragmented and combined tunnel frames, length/overflow rejection and transaction/route pinning.
@@ -14,6 +14,7 @@ Android 0.1.1, version code 2. Source baseline: iOS build 20261013.9 (`6458b22`)
 - Real loopback TCP handshake, identity and PI30 detection, status/settings reads, cancellation of a pending socket read.
 - An ACK/readback mismatch that returns an error and sends the write once only.
 - Startup and live-reading NAK replies over a real loopback TCP connection retain the exact failed query name. These two regression tests failed with the previous generic message and pass in 0.1.1.
+- After a valid QPI NAK, fixed PI17/PI18 identifier probes validate golden request/reply bytes, lengths and checksums. Loopback tests cover both identifier paths, timeout continuation, stopping after corruption/NOA, and refusal to send settings on an unidentified connection. The two alternate-ID tests failed before the 0.1.2 implementation and pass afterward.
 
 Debug and unsigned Release builds pass. Lint has no errors; remaining notices concern dependency updates and Android’s deprecated backup attribute. Backup/transfer exclusion rules are supplied.
 
@@ -22,11 +23,13 @@ The user-facing Release APK is separately signed with a local RSA key and checke
 The signed Release APK installs and launches on the API 36 emulator. A `preview=true` intent is ignored by Release, which opens the normal empty Devices screen. The private GitHub prerelease asset's SHA-256 matches the local signed APK recorded in `docs/build-verification.json`.
 
 
-Version 0.1.1 passed the 19-test suite, Release build and lint locally. Its signed APK installs over 0.1.0 on the API 36 emulator, using the same signing certificate. The screenshot of a PV9000 connection rejection did not identify the failed query; 0.1.1 reports its name. **This diagnostic improvement does not establish PV9000 compatibility.** A retry on that inverter is needed.
+Version 0.1.2 passed the 27-test suite, Debug/Release builds and lint locally. Its signed APK installs over the previous release on the API 36 emulator, using the same signing certificate. The user identified the friend's inverter as MAXPOWER PV Tech 9000, and reported QPI rejection. The new probes collect only protocol-ID evidence; **MAXPOWER monitoring and settings are not supported or physically verified yet.** See [protocol identification](docs/protocol-identification.md).
+
+The release's Connection dialog was checked in the emulator using an invalid public IP, which was rejected before networking. The new native Copy button produced an Android clipboard preview matching the error, and Done dismissed the dialog. This UI check did not exercise a real inverter or the long protocol report.
 
 ## Emulator walkthrough
 
-Version 0.1.0 walkthrough: Pixel 9 Pro, Android 16 / API 36, labeled sample data. The 0.1.1 change adds read-query context to errors and does not change the UI layout:
+Version 0.1.0 dashboard/settings walkthrough: Pixel 9 Pro, Android 16 / API 36, labeled sample data. The later diagnostic changes do not alter those screens:
 
 - Devices has Connected / Saved / Discovered groups and Devices / Settings root navigation.
 - A device opens the dashboard without bottom navigation.

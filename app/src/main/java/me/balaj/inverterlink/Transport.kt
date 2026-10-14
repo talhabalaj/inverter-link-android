@@ -165,7 +165,7 @@ class InverterSession(private val socket: Socket) : Closeable {
         while (true) {
             currentCoroutineContext().ensureActive()
             if (frames.isNotEmpty()) return frames.removeFirst()
-            checkProtocol(System.nanoTime() < deadline, "Inverter response timed out.")
+            if (System.nanoTime() >= deadline) throw InverterResponseTimeout()
             socket.soTimeout =
                 minOf(250, maxOf(1, ((deadline - System.nanoTime()) / 1_000_000).toInt()))
             val bytes = ByteArray(4096)
@@ -219,23 +219,56 @@ class InverterSession(private val socket: Socket) : Closeable {
             "Invalid Eybond logger identity.",
         )
         route = reply.code
+        val protocol =
+            try {
+                query(ReadCommand.PROTOCOL)
+            } catch (e: IllegalArgumentException) {
+                if ((e.cause as? CommandRejected)?.reply == "NAK") throw identifyAlternateProtocol()
+                throw e
+            }
         checkProtocol(
-            query(ReadCommand.PROTOCOL) == "PI30",
+            protocol == "PI30",
             "Only the verified PI30 model is supported.",
         )
         val firmware = query(ReadCommand.FIRMWARE)
         metadata = Metadata.parse(identity, firmware, query(ReadCommand.RATINGS))
     }
 
-    private suspend fun exchange(payload: ByteArray): String {
+    private suspend fun identifyAlternateProtocol(): IllegalArgumentException {
+        val results = mutableListOf("QPI: NAK")
+        var detected: String? = null
+        for (probe in ProtocolProbe.entries) {
+            try {
+                detected = exchange(probe.request(), ProtocolProbe::response)
+                results += "${probe.wire}: $detected"
+                break
+            } catch (e: CommandRejected) {
+                results += "${probe.wire}: ${e.reply}"
+                if (e.reply != "NAK") break
+            } catch (_: InverterResponseTimeout) {
+                results += "${probe.wire}: No reply"
+            } catch (e: IllegalArgumentException) {
+                results += "${probe.wire}: ${e.message}"
+                break // Invalid CRC, route or framing is not evidence to try another dialect.
+            }
+        }
+        val summary =
+            if (detected != null) "Received $detected. Monitoring and settings for this protocol are not supported yet."
+            else "The inverter rejected QPI and could not be identified. Monitoring and settings are unavailable."
+        return IllegalArgumentException(
+            "$summary\n\nProtocol report (${BuildConfig.VERSION_NAME}):\n${results.joinToString("\n")}\n\nCopy this report to share. No inverter setting was changed."
+        )
+    }
+
+    private suspend fun exchange(payload: ByteArray, response: (ByteArray) -> String = PI30::response): String {
         if (System.nanoTime() - heartbeatAt >= 45_000_000_000L) heartbeat()
         val id = send(route, 4, payload)
         val deadline = System.nanoTime() + 4_000_000_000L
         while (true) {
             val remaining = (deadline - System.nanoTime()) / 1e9
-            checkProtocol(remaining > 0, "Inverter response timed out.")
+            if (remaining <= 0) throw InverterResponseTimeout()
             val reply = frame(remaining)
-            if (reply.matches(id, route)) return PI30.response(reply.payload)
+            if (reply.matches(id, route)) return response(reply.payload)
         }
     }
 
@@ -263,6 +296,7 @@ class InverterSession(private val socket: Socket) : Closeable {
     }
 
     suspend fun apply(setting: Setting, value: String): InverterSettings {
+        checkProtocol(::metadata.isInitialized, "Connect to a verified PI30 inverter before changing settings.")
         val before = settings()
         val command = setting.command(value, before)
         checkProtocol(

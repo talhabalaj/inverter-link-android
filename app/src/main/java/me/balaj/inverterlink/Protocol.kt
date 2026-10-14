@@ -95,10 +95,7 @@ object PI30 {
         val text = data.copyOfRange(1, data.size - 3)
         checkProtocol(text.all { it.u() in 32..126 }, "Invalid inverter response text.")
         val result = text.toString(Charsets.US_ASCII)
-        checkProtocol(
-            result !in listOf("NAK", "NOA", "ERCRC"),
-            "Inverter rejected the command: $result.",
-        )
+        if (result in listOf("NAK", "NOA", "ERCRC")) throw CommandRejected(result)
         return result
     }
 }

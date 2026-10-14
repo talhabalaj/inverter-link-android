@@ -1,20 +1,21 @@
 {
-  "version": "0.1.1",
-  "version_code": 2,
+  "version": "0.1.2",
+  "version_code": 3,
   "tests": {
-    "tests": "19",
+    "tests": "27",
     "failures": "0",
     "errors": "0",
     "skipped": "0"
   },
   "release_archive": "built",
-  "apk_sha256": "0df8fbc200497729b512f22bc851f4df615b4044a3d998cb01a6b7822a132452",
+  "apk_sha256": "e900906395d25df5792523809733fbd954635bc2c3f547f756085a645c915306",
   "physical_android_verified": false,
   "emulator_api": 36,
   "material3": "1.5.0-beta01",
   "signed_release_installed_on_emulator": true,
   "release_ignores_preview": true,
-  "github_release_digest_verified": true,
+  "github_release_digest_verified": false,
   "emulator_ui_verified_version": "0.1.0",
-  "preview_guard_verified_version": "0.1.0"
+  "preview_guard_verified_version": "0.1.0",
+  "connection_dialog_copy_verified_version": "0.1.2"
 }

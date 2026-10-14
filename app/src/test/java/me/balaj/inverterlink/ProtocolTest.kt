@@ -216,6 +216,9 @@ class ProtocolTest {
 
     private suspend fun withMock(
         replies: Map<String, String> = Sample.replies,
+        sent: MutableList<String>? = null,
+        identify: Boolean = true,
+        encodedReplies: Map<String, ByteArray> = emptyMap(),
         block: suspend (InverterSession, AtomicInteger) -> Unit,
     ) =
         coroutineScope {
@@ -241,20 +244,26 @@ class ProtocolTest {
                                                 "TEST-LOGGER".toByteArray(),
                                             )
                                         else {
+                                            val suffix =
+                                                if (frame.payload.toString(Charsets.US_ASCII).startsWith("^P003PI")) 1 else 3
                                             val command =
                                                 frame.payload
-                                                    .copyOfRange(0, frame.payload.size - 3)
+                                                    .copyOfRange(0, frame.payload.size - suffix)
                                                     .toString(Charsets.US_ASCII)
+                                            sent?.add(command)
                                             val text =
                                                 replies[command]
                                                     ?: "ACK".also { writes.incrementAndGet() }
-                                            val body = "($text".toByteArray()
+                                            if (text == "NO_REPLY") continue
+                                            val body =
+                                                (if (command.startsWith("^P") && text.startsWith("PI"))
+                                                    "^D005${text.removePrefix("PI")}" else "($text").toByteArray()
                                             TunnelFrame(
                                                 frame.transaction,
                                                 258,
                                                 1,
                                                 4,
-                                                body + PI30.crc(body) + byteArrayOf(13),
+                                                encodedReplies[command] ?: (body + PI30.crc(body) + byteArrayOf(13)),
                                             )
                                         }
                                     socket.getOutputStream().write(reply.bytes())
@@ -267,7 +276,7 @@ class ProtocolTest {
             try {
                 InverterSession(socket).use { session ->
                     withContext(Dispatchers.IO) {
-                        session.identify()
+                        if (identify) session.identify()
                         block(session, writes)
                     }
                 }
@@ -277,6 +286,115 @@ class ProtocolTest {
                 server.close()
             }
         }
+
+    @Test
+    fun alternateIdentifierFramesMatchGoldenBytes() {
+        assertArrayEquals(byteArrayOf(94,80,48,48,53,80,73,0x71,0x8b.toByte(),13), ProtocolProbe.SEC_CRC.request())
+        assertArrayEquals("^P003PI\r".toByteArray(), ProtocolProbe.SEC_NO_CRC.request())
+        assertEquals("PI18", ProtocolProbe.response(byteArrayOf(94,68,48,48,53,49,56,0x3b,0x03,13)))
+        assertEquals("PI17", ProtocolProbe.response(byteArrayOf(94,68,48,48,53,49,55,0xca.toByte(),0xec.toByte(),13)))
+    }
+
+    @Test
+    fun alternateIdentifiersRejectWrongLengthAndCorruption() {
+        fun frame(body: String): ByteArray = body.toByteArray().let { it + PI30.crc(it) + byteArrayOf(13) }
+        for (body in listOf("^D00418", "^D00618", "^D005AA", "^D005180", "^D0051", "^D0051\u0001", "^A00518")) {
+            fails { ProtocolProbe.response(frame(body)) }
+        }
+        val corrupt = frame("^D00518").also { it[it.lastIndex-1] = (it[it.lastIndex-1].u() xor 1).toByte() }
+        fails { ProtocolProbe.response(corrupt) }
+        fails { ProtocolProbe.response(frame("^D00518").dropLast(1).toByteArray()) }
+    }
+
+    @Test
+    fun protocolProbesStopOnCorruption() = runBlocking {
+        withTimeout(10000) {
+            fun corrupt(body: String): ByteArray = body.toByteArray().let { it + PI30.crc(it) + byteArrayOf(13) }
+                .also { it[it.lastIndex-1] = (it[it.lastIndex-1].u() xor 1).toByte() }
+            for (command in listOf("QPI", "^P005PI")) {
+                val sent = mutableListOf<String>()
+                try {
+                    withMock(replies = Sample.replies + mapOf("QPI" to "NAK", "^P005PI" to "PI18"), sent = sent,
+                        encodedReplies = mapOf(command to corrupt(if (command == "QPI") "(NAK" else "^D00518"))) { _, _ ->
+                        fail("Corrupt reply must not connect")
+                    }
+                } catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("checksum")) }
+                assertEquals(if (command == "QPI") listOf("QPI") else listOf("QPI", "^P005PI"), sent)
+            }
+        }
+    }
+
+    @Test
+    fun unavailableQueriesDoNotTriggerAlternateProbes() = runBlocking {
+        withTimeout(10000) {
+            val sent = mutableListOf<String>()
+            try {
+                withMock(replies = Sample.replies + ("QPI" to "NOA"), sent = sent) { _, _ -> fail("NOA must fail") }
+            } catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("NOA")) }
+            assertEquals(listOf("QPI"), sent)
+        }
+    }
+
+    @Test
+    fun identifierTimeoutStillTriesNoCrcFormat() = runBlocking {
+        withTimeout(10000) {
+            val sent = mutableListOf<String>()
+            try {
+                withMock(replies = Sample.replies + mapOf("QPI" to "NAK", "^P005PI" to "NO_REPLY", "^P003PI" to "PI17"), sent = sent) { _, _ ->
+                    fail("Alternate protocol must not connect")
+                }
+            } catch (e: IllegalArgumentException) {
+                assertTrue(e.message!!.contains("PI17"))
+                assertTrue(e.message!!.contains("^P005PI: No reply"))
+            }
+            assertEquals(listOf("QPI", "^P005PI", "^P003PI"), sent)
+        }
+    }
+
+    @Test
+    fun unverifiedProtocolCannotSendSettings() = runBlocking {
+        withTimeout(10000) {
+            val sent = mutableListOf<String>()
+            withMock(replies = Sample.replies + mapOf("QPI" to "NAK", "^P005PI" to "PI18"), sent = sent, identify = false) { session, writes ->
+                try { session.identify(); fail("Alternate protocol must not connect") }
+                catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("PI18")) }
+                try { session.apply(setting("output_voltage"), "220"); fail("Settings must remain disabled") }
+                catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("verified PI30")) }
+                assertEquals(0, writes.get())
+                assertEquals(listOf("QPI", "^P005PI"), sent)
+            }
+        }
+    }
+
+    @Test
+    fun rejectedQpiIdentifiesPi18WithoutEnablingSettings() = runBlocking {
+        withTimeout(10000) {
+            val sent = mutableListOf<String>()
+            try {
+                withMock(replies = Sample.replies + mapOf("QPI" to "NAK", "^P005PI" to "PI18"), sent = sent) { _, _ ->
+                    fail("Unsupported protocol must not connect")
+                }
+            } catch (e: IllegalArgumentException) {
+                assertTrue("Missing alternate protocol: ${e.message}", e.message!!.contains("PI18"))
+            }
+            assertEquals(listOf("QPI", "^P005PI"), sent)
+        }
+    }
+
+    @Test
+    fun rejectedQpiIdentifiesPi17WithoutEnablingSettings() = runBlocking {
+        withTimeout(10000) {
+            val sent = mutableListOf<String>()
+            try {
+                withMock(replies = Sample.replies + mapOf("QPI" to "NAK", "^P005PI" to "NAK", "^P003PI" to "PI17"), sent = sent) { _, _ ->
+                    fail("Unsupported protocol must not connect")
+                }
+            } catch (e: IllegalArgumentException) {
+                assertTrue("Missing alternate protocol: ${e.message}", e.message!!.contains("PI17"))
+            }
+            assertEquals(listOf("QPI", "^P005PI", "^P003PI"), sent)
+        }
+    }
 
     @Test
     fun startupRejectionNamesTheCommand() = runBlocking {

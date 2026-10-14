@@ -11,15 +11,18 @@ Functionality is ported from [Inverter Link for iOS](https://github.com/talhabal
 | Android | [Inverter Link for Android](https://github.com/talhabalaj/inverter-link-android) | Jetpack Compose / Material 3 Expressive |
 | iOS | [Inverter Link](https://github.com/talhabalaj/inverter-link) | SwiftUI / RealityKit |
 
-Both apps implement the same local PI30 functionality and 37-setting map, with platform-specific controls and background behavior. [Download the signed Android APK](https://github.com/talhabalaj/inverter-link-android/releases/tag/v0.1.1).
+Both apps implement the same local PI30 functionality and 37-setting map, with platform-specific controls and background behavior. [Download the signed Android APK](https://github.com/talhabalaj/inverter-link-android/releases/tag/v0.1.2).
 
-## Tested inverter
+## Inverter compatibility
 
 | Inverter | Logger / protocol | Verification |
 | --- | --- | --- |
 | **SolarMax Orion 4 kW (24 V)** | Energy Mate / Eybond · PI30 | Monitoring, settings reads and LED color 1 verified using the original iOS/local implementation; Android physical verification is pending |
+| **[MAXPOWER PV Tech 9000 (6 kW / 48 V)](https://maxpower.com.pk/product/pv-tech-9000/)** | Energy Mate, user-reported | One installation rejects QPI; protocol and monitoring/settings support are unverified |
 
 Android is verified with emulator UI and mock/loopback protocol tests. Using Energy Mate alone does not establish compatibility with another inverter model.
+
+If QPI is rejected, 0.1.2 can try fixed, read-only PI17/PI18 identifier formats and show a copyable report. **This does not enable monitoring or settings for the other protocol.** See [protocol identification](docs/protocol-identification.md).
 
 ## Before using it
 

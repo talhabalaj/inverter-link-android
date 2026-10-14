@@ -5,6 +5,8 @@
 
 package me.balaj.inverterlink
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -12,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,6 +22,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.input.KeyboardType
@@ -266,10 +270,21 @@ fun InverterApp(
             }
         }
         s.error?.let { message ->
+            val context = LocalContext.current
             AlertDialog(
                 onDismissRequest = { model.clearError() },
                 title = { Text("Connection") },
-                text = { Text(message) },
+                text = {
+                    SelectionContainer {
+                        Text(message, Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        context.getSystemService(ClipboardManager::class.java)
+                            .setPrimaryClip(ClipData.newPlainText("Inverter connection report", message))
+                    }) { Text("Copy") }
+                },
                 confirmButton = { TextButton(onClick = { model.clearError() }) { Text("Done") } },
             )
         }
